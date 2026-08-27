@@ -19,9 +19,11 @@ data-integrity risk, or unresolved root causes get a second expert.
 4. One fresh rebuttal is allowed when a disagreement could change the decision.
 5. Claude synthesizes the result; the user approves every high-impact or one-way choice.
 
-The Codex consultation is enforced read-only by the plugin sandbox. The skill also instructs
-Claude not to edit, but a skill cannot revoke tools already granted to the host session. For
-strict enforcement, use Claude Code permission controls or a disposable read-only workspace.
+The Codex consultation runs in the plugin's read-only sandbox. That is not automatic: the rescue
+wrapper adds `--write` by default and omits it only when the request clearly reads as review or
+diagnosis without edits, so every brief opens with a mandatory read-only line. The skill also
+instructs Claude not to edit, but a skill cannot revoke tools already granted to the host session.
+For strict enforcement, use Claude Code permission controls or a disposable read-only workspace.
 
 ## Prerequisites
 
@@ -59,6 +61,10 @@ mkdir -p ~/.claude/skills
 git clone https://github.com/Marcussy34/claude-codex-council.git \
   ~/.claude/skills/cross-model-deliberation
 ```
+
+The target directory name matters: it must be `cross-model-deliberation` to match the skill's
+`name` field. Cloning without the explicit path leaves a `claude-codex-council` directory and a
+name mismatch.
 
 Start a fresh Claude Code session after installation. The skill is available as
 `/cross-model-deliberation` and can also load automatically when its description matches the
@@ -116,8 +122,9 @@ explicitly requests a second expert.
 
 ## Safety and limitations
 
-- Codex is invoked with a fresh brief and without `--write`, which selects the plugin's read-only
-  sandbox.
+- Codex is invoked with a fresh brief whose first line explicitly requests review and diagnosis
+  without edits. The rescue wrapper honors that by omitting `--write`, which selects the
+  companion's read-only sandbox. The guarantee rests on that line, not on the routing flags.
 - Claude's no-edit rule is a behavioral instruction, not a host-level security boundary.
 - Claude and Codex can still share blind spots. Agreement is evidence to inspect, not proof.
 - No implementation begins until the user approves the synthesized decision.

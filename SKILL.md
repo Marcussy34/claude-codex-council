@@ -11,49 +11,46 @@ private chain-of-thought.
 
 ## Trigger gate
 
-An explicit user request for a second expert always triggers this workflow. Otherwise, run it
-only when the issue is genuinely difficult, the outcome is materially consequential, and at
-least one condition applies:
+Routing is driven by the description. Once this skill has loaded, re-check the decision and
+abort back to the main session unless the user explicitly asked for a second expert, or the
+decision is both genuinely difficult and one of: hard to reverse, such as a public interface,
+data model or migration, vendor commitment, or core system boundary; carrying material security,
+authentication, payments, data-integrity, concurrency, or distributed-system blast radius; or
+resting on a root cause still ambiguous after inspecting the available logs, tests, and evidence.
 
-- Two or more credible architectural approaches remain and the choice has substantial blast
-  radius, operational cost, or long-term lock-in.
-- The decision is difficult to reverse, such as a public interface, data model or migration,
-  platform or vendor commitment, or core system boundary.
-- A security, authentication, payments, data-integrity, concurrency, or distributed-system
-  decision has material blast radius, uncertainty, or cross-system impact.
-- A hard diagnosis remains materially ambiguous after inspecting the available logs, tests,
-  and evidence, or Claude cannot establish the root cause with high confidence.
-
-Routine-case exclusions override the risk-domain examples during automatic routing. Do not
-auto-invoke for routine bugs, narrow reversible choices, or decisions where the evidence clearly
-points to one answer.
+Routine bugs, narrow reversible choices, and decisions where the evidence already points to one
+answer stay with Claude. These exclusions override the risk-domain examples above.
 
 ## Workflow
 
-1. **Form Claude's independent view.** Inspect the evidence and create a concise provisional
-   memo covering options, assumptions, risks, evidence, and a recommendation. Do not reveal the
-   recommendation in Codex's initial prompt, so it cannot anchor Codex.
-2. **Get Codex's independent view.** Invoke the host's Agent subagent surface with
+1. **Form Claude's independent view.** Inspect the evidence and write a concise provisional memo
+   covering options, assumptions, risks, evidence, and a recommendation. Keep the recommendation
+   out of Codex's initial brief so it cannot anchor Codex.
+2. **Tell the user before dispatching.** A max-effort consult is slow and costly, and this skill
+   can load automatically. State in one line that Codex is being consulted and why.
+3. **Confirm effective max effort.** Read `~/.codex/config.toml`, then any project-level
+   `.codex/config.toml`, which overrides the user-level file in a trusted project. Both must
+   leave `model_reasoning_effort = "max"` in force. If that cannot be established, disclose it
+   and stop rather than calling the result a max-effort deliberation.
+4. **Get Codex's independent view.** Invoke the host's Agent subagent surface with
    `subagent_type="codex:codex-rescue"` and a raw prompt beginning
-   `--wait --fresh --model gpt-5.6-sol`. Run it in foreground mode. The outer Agent call and the
-   forwarded rescue request must both wait for the result. Make the prompt neutral,
-   self-contained, and explicitly read-only. Leave effort unset because the rescue interface
-   does not accept `max`; Codex must inherit `model_reasoning_effort = "max"` from its effective
-   configuration. Before dispatch, check the user-level config and any trusted project-level
-   override. If effective max effort cannot be established, disclose that and stop rather than
-   calling the result a max-effort deliberation. Ask for options, a recommendation, assumptions,
-   supporting evidence, failure modes, missing evidence, and confidence.
-3. **Compare; do not vote.** Identify agreements, material disagreements, novel risks, and
-   missing evidence. Judge competing claims by evidence. Model agreement is not proof.
-4. **Run one focused rebuttal only when needed.** If a disagreement could change the decision,
-   launch one new read-only rescue consult with `--wait --fresh --model gpt-5.6-sol`. Embed both
-   complete concise memos and the relevant evidence, then ask Codex to challenge the disputed
-   assumptions. Do not use `--resume`: it may select an unrelated concurrent repository task.
-   Do not exceed the initial consult plus one rebuttal unless the user asks.
-5. **Synthesize for the user.** Present the recommended decision, why it won, the strongest
-   opposing case, unresolved uncertainty, and any experiment needed to resolve it. The user
-   decides every one-way or high-impact choice before implementation.
-6. **Keep deliberation read-only.** Neither expert edits code during this workflow. Begin
+   `--wait --fresh --model gpt-5.6-sol`. Run it in foreground mode; the outer Agent call and the
+   forwarded rescue request must both wait for the result. Leave effort unset, because the rescue
+   interface rejects `max` and Codex inherits it from configuration instead. Build the brief from
+   [references/brief-template.md](references/brief-template.md), whose mandatory first line is
+   what keeps the run read-only.
+5. **Compare; do not vote.** Identify agreements, material disagreements, novel risks, and
+   missing evidence. Judge competing claims by evidence. Model agreement is not proof. When the
+   evidence is genuinely balanced, do not break the tie privately: present both cases and let the
+   user decide.
+6. **Run one focused rebuttal only when needed.** If a disagreement could change the decision,
+   launch one new read-only consult with `--wait --fresh --model gpt-5.6-sol`, using the rebuttal
+   section of the brief template. Do not use `--resume`: it may select an unrelated concurrent
+   repository task. Do not exceed the initial consult plus one rebuttal unless the user asks.
+7. **Synthesize for the user.** Follow
+   [references/synthesis-template.md](references/synthesis-template.md). The user decides every
+   one-way or high-impact choice before implementation.
+8. **Keep deliberation read-only.** Neither expert edits code during this workflow. Begin
    planning or implementation only after the decision is approved through the normal process.
 
 ## Rescue boundary
@@ -61,12 +58,16 @@ points to one answer.
 Use `codex:codex-rescue` only for this bounded, non-editing consultation. Never background, poll,
 fetch, or convert a rescue consultation into an implementation task.
 
-Codex is sandboxed read-only because the rescue call omits `--write`. Claude's no-edit rule is a
-behavioral constraint: this skill cannot revoke tools already granted to the host session. Do not
-describe Claude itself as sandboxed unless the host permissions independently enforce that.
+The read-only sandbox is not automatic. The rescue wrapper adds `--write` by default and omits it
+only when the request clearly reads as review, diagnosis, or research without edits. The
+companion then maps that to `sandbox: "read-only"`. So the guarantee rests on the brief's opening
+line, not on the routing flags. Never drop it. Claude's own no-edit rule is a behavioral
+constraint: this skill cannot revoke tools already granted to the host session. Do not describe
+Claude itself as sandboxed unless the host permissions independently enforce that.
 
-Use a 15-minute foreground tool timeout where the host exposes one. Treat the second opinion as
-unavailable if the Agent or companion call times out, errors, returns empty output, starts a
-background job despite `--wait`, or supplies insufficient evidence. Disclose that state clearly
-and do not label the decision cross-model validated. For a one-way or high-impact choice, ask the
-user whether to proceed with Claude's analysis alone.
+Use the host's maximum foreground timeout; on Claude Code that is the 10-minute Bash ceiling, and
+the Agent tool exposes no timeout of its own. Treat the second opinion as unavailable if the
+Agent or companion call times out, errors, returns empty output, starts a background job despite
+`--wait`, or supplies insufficient evidence. Disclose that state clearly and do not label the
+decision cross-model validated. For a one-way or high-impact choice, ask the user whether to
+proceed with Claude's analysis alone.
