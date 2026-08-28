@@ -31,9 +31,10 @@ spike. If a cheap test would settle a material question, recommend running it be
 
 ## Rules
 
-- Report degraded runs honestly. If the consult timed out, errored, returned empty output, went
-  to background despite `--wait`, or came back thin, say so and do not label the decision
-  cross-model validated. Offer to proceed on Claude's analysis alone.
+- Report degraded runs honestly. If the consult timed out, errored, returned empty output, was
+  detached by the companion as a background job despite `--wait`, or came back thin, say so and
+  do not label the decision cross-model validated. The host's Agent surface completing
+  asynchronously is normal, not a degraded run. Offer to proceed on Claude's analysis alone.
 - When the evidence is genuinely balanced, do not manufacture a winner. Present both cases under
   Recommendation and hand the tie to the user.
 - Agreement between the two models is evidence to inspect, not proof. Shared blind spots are the

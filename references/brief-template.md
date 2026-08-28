@@ -16,9 +16,10 @@ The brief becomes a shell argument inside the wrapper's `Bash` call. Therefore:
 
 ## Initial consult
 
-The first line is mandatory and verbatim. It is the only thing keeping the run read-only: the
-rescue wrapper adds `--write` by default and omits it only when the request clearly reads as
-review, diagnosis, or research without edits.
+The first line is mandatory and verbatim. It is what makes the rescue wrapper omit `--write`,
+which the companion maps to a read-only sandbox request: the wrapper adds `--write` by default
+and omits it only when the request clearly reads as review, diagnosis, or research without
+edits. Nothing else in the flags requests read-only.
 
 ```text
 READ-ONLY CONSULTATION - review and diagnosis only, no edits. Do not pass --write.

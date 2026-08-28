@@ -19,11 +19,14 @@ data-integrity risk, or unresolved root causes get a second expert.
 4. One fresh rebuttal is allowed when a disagreement could change the decision.
 5. Claude synthesizes the result; the user approves every high-impact or one-way choice.
 
-The Codex consultation runs in the plugin's read-only sandbox. That is not automatic: the rescue
-wrapper adds `--write` by default and omits it only when the request clearly reads as review or
-diagnosis without edits, so every brief opens with a mandatory read-only line. The skill also
-instructs Claude not to edit, but a skill cannot revoke tools already granted to the host session.
-For strict enforcement, use Claude Code permission controls or a disposable read-only workspace.
+The Codex consultation requests the plugin's read-only sandbox. That is not automatic: the
+rescue wrapper adds `--write` by default and omits it only when the request clearly reads as
+review or diagnosis without edits, so every brief opens with a mandatory read-only line. The
+request has been verified taking effect on codex-cli 0.150.1, even over a permissive user-level
+`sandbox_mode`, but the precedence lives in the Codex binary and the skill is not an independent
+security boundary. The skill also instructs Claude not to edit, but a skill cannot revoke tools
+already granted to the host session. For strict enforcement, use Claude Code permission controls
+or a disposable read-only workspace.
 
 ## Prerequisites
 
@@ -123,8 +126,14 @@ explicitly requests a second expert.
 ## Safety and limitations
 
 - Codex is invoked with a fresh brief whose first line explicitly requests review and diagnosis
-  without edits. The rescue wrapper honors that by omitting `--write`, which selects the
-  companion's read-only sandbox. The guarantee rests on that line, not on the routing flags.
+  without edits. The rescue wrapper honors that by omitting `--write`, and the companion then
+  requests the read-only sandbox. The request rests on that line, not on the routing flags.
+- Verified on codex-cli 0.150.1: the rollout log for a live consult recorded
+  `sandbox_policy: read-only` and `reasoning_effort: max` despite a user-level
+  `sandbox_mode = "danger-full-access"`. Re-verify after a Codex CLI upgrade by checking
+  `sandbox_policy` in the newest `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`.
+- Read-only covers Codex's own filesystem actions. The companion still writes its job state,
+  logs, and transcripts.
 - Claude's no-edit rule is a behavioral instruction, not a host-level security boundary.
 - Claude and Codex can still share blind spots. Agreement is evidence to inspect, not proof.
 - No implementation begins until the user approves the synthesized decision.

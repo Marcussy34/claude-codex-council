@@ -34,11 +34,13 @@ answer stay with Claude. These exclusions override the risk-domain examples abov
    and stop rather than calling the result a max-effort deliberation.
 4. **Get Codex's independent view.** Invoke the host's Agent subagent surface with
    `subagent_type="codex:codex-rescue"` and a raw prompt beginning
-   `--wait --fresh --model gpt-5.6-sol`. Run it in foreground mode; the outer Agent call and the
-   forwarded rescue request must both wait for the result. Leave effort unset, because the rescue
+   `--wait --fresh --model gpt-5.6-sol`. The `--wait` keeps the companion run synchronous inside
+   the subagent. The host's Agent surface may still return an async handle and deliver the result
+   as a completion notification; that is normal, not a failure. Wait for the result and do not
+   proceed to synthesis without it. Leave effort unset, because the rescue
    interface rejects `max` and Codex inherits it from configuration instead. Build the brief from
    [references/brief-template.md](references/brief-template.md), whose mandatory first line is
-   what keeps the run read-only.
+   what makes the wrapper request the read-only sandbox.
 5. **Compare; do not vote.** Identify agreements, material disagreements, novel risks, and
    missing evidence. Judge competing claims by evidence. Model agreement is not proof. When the
    evidence is genuinely balanced, do not break the tie privately: present both cases and let the
@@ -58,16 +60,25 @@ answer stay with Claude. These exclusions override the risk-domain examples abov
 Use `codex:codex-rescue` only for this bounded, non-editing consultation. Never background, poll,
 fetch, or convert a rescue consultation into an implementation task.
 
-The read-only sandbox is not automatic. The rescue wrapper adds `--write` by default and omits it
-only when the request clearly reads as review, diagnosis, or research without edits. The
-companion then maps that to `sandbox: "read-only"`. So the guarantee rests on the brief's opening
-line, not on the routing flags. Never drop it. Claude's own no-edit rule is a behavioral
-constraint: this skill cannot revoke tools already granted to the host session. Do not describe
-Claude itself as sandboxed unless the host permissions independently enforce that.
+The read-only sandbox is requested, not automatic. The rescue wrapper adds `--write` by default
+and omits it only when the request clearly reads as review, diagnosis, or research without
+edits; the companion then sends `sandbox: "read-only"` to the Codex runtime. So the request
+rests on the brief's opening line, not on the routing flags. Never drop it. This per-request
+value has been verified taking effect over a user-level `sandbox_mode = "danger-full-access"` on
+codex-cli 0.150.1 via the rollout log, but that precedence lives in the Codex binary: after a
+CLI upgrade, re-verify by checking `sandbox_policy` in the newest
+`~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`. The same check can confirm any consult after the
+fact. Read-only scopes Codex's own filesystem actions; the companion still writes its job state
+and transcripts, and this skill is not an independent security boundary. Claude's own no-edit
+rule is a behavioral constraint: this skill cannot revoke tools already granted to the host
+session. Do not describe Claude itself as sandboxed unless the host permissions independently
+enforce that.
 
 Use the host's maximum foreground timeout; on Claude Code that is the 10-minute Bash ceiling, and
 the Agent tool exposes no timeout of its own. Treat the second opinion as unavailable if the
-Agent or companion call times out, errors, returns empty output, starts a background job despite
-`--wait`, or supplies insufficient evidence. Disclose that state clearly and do not label the
+Agent or companion call times out, errors, returns empty output, or supplies insufficient
+evidence, or if the companion detaches the run as a background job despite `--wait`. The host's
+Agent surface returning asynchronously is not that failure; only a companion response that
+reports a queued or backgrounded job is. Disclose that state clearly and do not label the
 decision cross-model validated. For a one-way or high-impact choice, ask the user whether to
 proceed with Claude's analysis alone.
