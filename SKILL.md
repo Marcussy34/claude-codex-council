@@ -28,17 +28,18 @@ answer stay with Claude. These exclusions override the risk-domain examples abov
    out of Codex's initial brief so it cannot anchor Codex.
 2. **Tell the user before dispatching.** A max-effort consult is slow and costly, and this skill
    can load automatically. State in one line that Codex is being consulted and why.
-3. **Confirm effective max effort.** Read `~/.codex/config.toml`, then any project-level
-   `.codex/config.toml`, which overrides the user-level file in a trusted project. Both must
-   leave `model_reasoning_effort = "max"` in force. If that cannot be established, disclose it
-   and stop rather than calling the result a max-effort deliberation.
+3. **Confirm effective max effort.** The consult prefix passes `--effort max`, which overrides
+   the `xhigh` default in `~/.codex/config.toml` and any project-level `.codex/config.toml` for
+   that turn. It relies on a local companion patch that adds `max` to the effort allowlist. If the
+   companion rejects `max` (for example after a plugin update), disclose it and stop rather than
+   calling the result a max-effort deliberation.
 4. **Get Codex's independent view.** Invoke the host's Agent subagent surface with
    `subagent_type="codex:codex-rescue"` and a raw prompt beginning
-   `--wait --fresh --model gpt-5.6-sol`. The `--wait` keeps the companion run synchronous inside
+   `--wait --fresh --model gpt-6-astra --effort max`. The `--wait` keeps the companion run synchronous inside
    the subagent. The host's Agent surface may still return an async handle and deliver the result
    as a completion notification; that is normal, not a failure. Wait for the result and do not
-   proceed to synthesis without it. Leave effort unset, because the rescue
-   interface rejects `max` and Codex inherits it from configuration instead. Build the brief from
+   proceed to synthesis without it. Always pass `--effort max`: this skill only runs for
+   genuinely hard decisions, so it is the one Codex consult that skips the `xhigh` default. Build the brief from
    [references/brief-template.md](references/brief-template.md), whose mandatory first line is
    what makes the wrapper request the read-only sandbox.
 5. **Compare; do not vote.** Identify agreements, material disagreements, novel risks, and
@@ -46,7 +47,7 @@ answer stay with Claude. These exclusions override the risk-domain examples abov
    evidence is genuinely balanced, do not break the tie privately: present both cases and let the
    user decide.
 6. **Run one focused rebuttal only when needed.** If a disagreement could change the decision,
-   launch one new read-only consult with `--wait --fresh --model gpt-5.6-sol`, using the rebuttal
+   launch one new read-only consult with `--wait --fresh --model gpt-6-astra --effort max`, using the rebuttal
    section of the brief template. Do not use `--resume`: it may select an unrelated concurrent
    repository task. Do not exceed the initial consult plus one rebuttal unless the user asks.
 7. **Synthesize for the user.** Follow
@@ -57,8 +58,9 @@ answer stay with Claude. These exclusions override the risk-domain examples abov
 
 ## Rescue boundary
 
-Use `codex:codex-rescue` only for this bounded, non-editing consultation. Never background, poll,
-fetch, or convert a rescue consultation into an implementation task.
+`codex:codex-rescue` is a bounded, non-editing consultation exception to the write-capable
+`codex-worker` wrapper. The stall-proof wrapper remains mandatory for every Codex implementation
+task. Never background, poll, fetch, or convert a rescue consultation into implementation.
 
 The read-only sandbox is requested, not automatic. The rescue wrapper adds `--write` by default
 and omits it only when the request clearly reads as review, diagnosis, or research without

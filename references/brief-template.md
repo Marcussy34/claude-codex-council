@@ -2,7 +2,7 @@
 
 Two briefs are used: the initial independent consult (step 4) and the optional rebuttal
 (step 6). Both are forwarded through `codex:codex-rescue` as the task text after the
-`--wait --fresh --model gpt-5.6-sol` prefix.
+`--wait --fresh --model gpt-6-astra --effort max` prefix.
 
 ## Transport rules
 

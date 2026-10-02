@@ -35,7 +35,7 @@ or a disposable read-only workspace.
 - A ChatGPT subscription, including Free, or an OpenAI API key for Codex authentication
 - [OpenAI Codex CLI](https://developers.openai.com/codex/cli/)
 - The official [Codex plugin for Claude Code](https://github.com/openai/codex-plugin-cc)
-- Access to `gpt-5.6-sol`
+- Access to `gpt-6-astra`
 
 Install the Codex plugin from inside Claude Code:
 
@@ -75,18 +75,20 @@ task.
 
 ## Configure max-effort Codex
 
-The skill pins the Codex model to `gpt-5.6-sol` and intentionally leaves the effort flag unset
-because the rescue interface does not currently accept `max`. Set the inherited effort in the
-effective Codex configuration. A user-level default belongs in `~/.codex/config.toml`:
+The skill pins the Codex model to `gpt-6-astra` and passes `--effort max` on every consult.
+The upstream Codex companion only accepts efforts up to `xhigh`, so add `max` once: in the
+installed plugin's `scripts/codex-companion.mjs`, add `"max"` to the `VALID_REASONING_EFFORTS`
+set. Plugin updates can overwrite this, so re-check after updating. Without the patch the
+companion rejects `max` and the skill stops with a clear message instead of running a weaker
+consult. The user-level default can stay at `xhigh` for all other Codex work, in
+`~/.codex/config.toml`:
 
 ```toml
-model = "gpt-5.6-sol"
-model_reasoning_effort = "max"
+model_reasoning_effort = "xhigh"
 ```
 
-Trusted projects can override this with `.codex/config.toml`. Confirm that no project-level
-override lowers `model_reasoning_effort` before relying on max-effort deliberation. Configuration
-at either scope also applies to other Codex runs at that scope.
+An explicit `--effort max` overrides both this file and any project-level `.codex/config.toml`
+for that turn. Configuration at either scope also applies to other Codex runs at that scope.
 
 ## Add the routing rule
 
